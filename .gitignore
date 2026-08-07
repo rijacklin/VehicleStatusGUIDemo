@@ -54,3 +54,8 @@ compile_commands.json
 *creator.user*
 
 *_qmlcache.qrc
+
+# Visual Studio and local build configuration
+.vs/
+out/
+CMakeUserPresets.json

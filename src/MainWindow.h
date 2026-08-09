@@ -5,13 +5,17 @@
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+	explicit MainWindow(QWidget *parent = nullptr);
+	~MainWindow() override = default;
 
 private:
-    Ui::MainWindowClass ui;
+	void handleStartButtonClicked();
+	void handlePauseButtonClicked();
+	void handleEmergencyStopButtonClicked();
+
+	Ui::MainWindowClass ui;
 };
 

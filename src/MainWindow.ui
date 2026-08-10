@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>599</width>
-    <height>412</height>
+    <width>1125</width>
+    <height>652</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -82,14 +82,14 @@
           <item>
            <widget class="QLabel" name="safetyFrameHeading">
             <property name="text">
-             <string>Normal</string>
+             <string>Safety</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="safetyFrameValue">
             <property name="text">
-             <string>Safety</string>
+             <string>Normal</string>
             </property>
            </widget>
           </item>
@@ -430,7 +430,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>599</width>
+     <width>1125</width>
      <height>21</height>
     </rect>
    </property>

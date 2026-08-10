@@ -20,6 +20,8 @@ set(PROJECT_SOURCES
 	infrastructure/SimulatedTelemetrySource.h
 	infrastructure/SimulatedTelemetrySource.cpp
 	domain/VehicleState.h
+	domain/ObstacleSafety.h
+	domain/ObstacleSafety.cpp
 )
 
 qt_add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

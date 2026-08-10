@@ -22,6 +22,13 @@ enum class ConnectionStatus
 	Connected,
 };
 
+enum class TelemetryFreshness
+{
+	Unavailable,
+	Fresh,
+	Stale,
+};
+
 enum class MissionStatus
 {
 	Unavailable,

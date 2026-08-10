@@ -22,4 +22,5 @@ private:
 	VehicleState m_vehicleState;
 	int m_obstacleTickCount { 0 };
 	int m_connectionTickCount { 0 };
+	int m_telemetryEmissionTickCount { 0 };
 };

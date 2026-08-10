@@ -2,13 +2,19 @@
 
 #include <QMessageBox>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent)
+	: QMainWindow(parent), m_staleTelemetryTimer(this)
 {
 	ui.setupUi(this);
+
+	m_staleTelemetryTimer.setInterval(1500);
+	m_staleTelemetryTimer.setSingleShot(true);
+
 	connect(ui.startButton, &QPushButton::clicked, this, &MainWindow::handleStartButtonClicked);
 	connect(ui.pauseButton, &QPushButton::clicked, this, &MainWindow::handlePauseButtonClicked);
 	connect(ui.emergencyStopButton, &QPushButton::clicked, this, &MainWindow::handleEmergencyStopButtonClicked);
 	connect(&m_telemetrySource, &SimulatedTelemetrySource::telemetryUpdated, this, &MainWindow::handleTelemetryUpdated);
+	connect(&m_staleTelemetryTimer, &QTimer::timeout, this, &MainWindow::handleTelemetryStale);
 }
 
 void MainWindow::renderMissionUi()
@@ -18,7 +24,7 @@ void MainWindow::renderMissionUi()
 		case MissionStatus::Paused:
 			ui.missionFrameStatus->setText(tr("Paused"));
 
-			if (m_connectionStatus == ConnectionStatus::Connected)
+			if (isTelemetryUsable())
 			{
 				ui.startButton->setEnabled(true);
 				ui.pauseButton->setEnabled(false);
@@ -32,7 +38,7 @@ void MainWindow::renderMissionUi()
 		case MissionStatus::Idle:
 			ui.missionFrameStatus->setText(tr("Idle"));
 
-			if (m_connectionStatus == ConnectionStatus::Connected)
+			if (isTelemetryUsable())
 			{
 				ui.startButton->setEnabled(true);
 				ui.pauseButton->setEnabled(false);
@@ -46,7 +52,7 @@ void MainWindow::renderMissionUi()
 		case MissionStatus::Running:
 			ui.missionFrameStatus->setText(tr("Running"));
 
-			if (m_connectionStatus == ConnectionStatus::Connected)
+			if (isTelemetryUsable())
 			{
 				ui.startButton->setEnabled(false);
 				ui.pauseButton->setEnabled(true);
@@ -71,9 +77,79 @@ void MainWindow::renderMissionUi()
 	}
 }
 
+void MainWindow::renderSafetyUi()
+{
+	if (m_missionStatus == MissionStatus::EmergencyStopped)
+	{
+		ui.safetyFrameValue->setText(tr("Emergency stop activated"));
+	}
+	else if (m_telemetryFreshness != TelemetryFreshness::Fresh)
+	{
+		ui.safetyFrameValue->setText(tr("Unavailable"));
+	}
+	else if (m_connectionStatus != ConnectionStatus::Connected)
+	{
+		ui.safetyFrameValue->setText(tr("Unavailable"));
+	}
+	else if (m_obstacleSafetySeverity == SafetySeverity::Critical)
+	{
+		ui.safetyFrameValue->setText(tr("Critical obstacle proximity"));
+	}
+	else if (m_obstacleSafetySeverity == SafetySeverity::Warning)
+	{
+		ui.safetyFrameValue->setText(tr("Obstacle nearby"));
+	}
+	else if (m_obstacleSafetySeverity == SafetySeverity::Normal)
+	{
+		ui.safetyFrameValue->setText(tr("Normal"));
+	}
+	else
+	{
+		ui.safetyFrameValue->setText(tr("Unavailable"));
+	}
+}
+
+void MainWindow::renderConnectionUi()
+{
+	switch (m_connectionStatus)
+	{
+		case ConnectionStatus::Connected:
+			if (m_telemetryFreshness == TelemetryFreshness::Fresh)
+			{
+				ui.connectionFrameValue->setText(tr("Connected | Fresh"));
+			}
+			else if (m_telemetryFreshness == TelemetryFreshness::Stale)
+			{
+				ui.connectionFrameValue->setText(tr("Connected | Stale"));
+			}
+			else
+			{
+				ui.connectionFrameValue->setText(tr("Unavailable"));
+			}
+			break;
+		case ConnectionStatus::Disconnected:
+			if (m_telemetryFreshness == TelemetryFreshness::Fresh)
+			{
+				ui.connectionFrameValue->setText(tr("Disconnected | Fresh"));
+			}
+			else if (m_telemetryFreshness == TelemetryFreshness::Stale)
+			{
+				ui.connectionFrameValue->setText(tr("Disconnected | Stale"));
+			}
+			else
+			{
+				ui.connectionFrameValue->setText(tr("Unavailable"));
+			}
+			break;
+		case ConnectionStatus::Unavailable:
+			ui.connectionFrameValue->setText(tr("Unavailable"));
+			break;
+	}
+}
+
 void MainWindow::handleStartButtonClicked()
 {
-	if (m_connectionStatus != ConnectionStatus::Connected || (m_missionStatus != MissionStatus::Idle && m_missionStatus != MissionStatus::Paused))
+	if (!isTelemetryUsable() || (m_missionStatus != MissionStatus::Idle && m_missionStatus != MissionStatus::Paused))
 	{
 		return;
 	}
@@ -84,7 +160,7 @@ void MainWindow::handleStartButtonClicked()
 
 void MainWindow::handlePauseButtonClicked()
 {
-	if (m_connectionStatus != ConnectionStatus::Connected || m_missionStatus != MissionStatus::Running)
+	if (!isTelemetryUsable() || m_missionStatus != MissionStatus::Running)
 	{
 		return;
 	}
@@ -110,33 +186,45 @@ void MainWindow::handleEmergencyStopButtonClicked()
 
 	m_missionStatus = MissionStatus::EmergencyStopped;
 	renderMissionUi();
-	ui.safetyFrameValue->setText(tr("Emergency stop activated"));
+	renderSafetyUi();
 	ui.emergencyStopButton->setEnabled(false);
 }
 
 void MainWindow::handleTelemetryUpdated(const VehicleState &state)
 {
+	m_telemetryFreshness = TelemetryFreshness::Fresh;
+	m_staleTelemetryTimer.start();
+
 	m_connectionStatus = state.connectionStatus;
+	renderConnectionUi();
 	renderMissionUi();
+
+	if (m_connectionStatus == ConnectionStatus::Connected)
+	{
+		m_obstacleSafetySeverity = evaluateSafetySeverity(state.obstacleObservation);
+	}
+	else
+	{
+		m_obstacleSafetySeverity = SafetySeverity::Unavailable;
+	}
+
+	renderSafetyUi();
 
 	const auto speedKph = state.speedMps * 3.6F;
 
 	switch (m_connectionStatus)
 	{
 		case ConnectionStatus::Unavailable:
-			ui.connectionFrameValue->setText(tr("Unavailable"));
 			ui.speedFrameValue->setText(tr("Unavailable"));
 			ui.batteryValue->setText(tr("Unavailable"));
 			ui.obstacleValue->setText(tr("Unavailable"));
 			break;
 		case ConnectionStatus::Disconnected:
-			ui.connectionFrameValue->setText(tr("Disconnected"));
 			ui.speedFrameValue->setText(tr("Unavailable"));
 			ui.batteryValue->setText(tr("Unavailable"));
 			ui.obstacleValue->setText(tr("Unavailable"));
 			break;
 		case ConnectionStatus::Connected:
-			ui.connectionFrameValue->setText(tr("Connected"));
 			ui.speedFrameValue->setText(tr("%1 km/h").arg(speedKph, 0, 'f', 1));
 
 			if (state.batteryPercentage)
@@ -171,4 +259,27 @@ void MainWindow::handleTelemetryUpdated(const VehicleState &state)
 			}
 			break;
 	}
+}
+
+void MainWindow::handleTelemetryStale()
+{
+	m_telemetryFreshness = TelemetryFreshness::Stale;
+
+	renderMissionUi();
+	renderSafetyUi();
+	renderConnectionUi();
+
+	ui.speedFrameValue->setText(tr("Unavailable"));
+	ui.batteryValue->setText(tr("Unavailable"));
+	ui.obstacleValue->setText(tr("Unavailable"));
+}
+
+bool MainWindow::isTelemetryUsable() const
+{
+	if (m_connectionStatus == ConnectionStatus::Connected && m_telemetryFreshness == TelemetryFreshness::Fresh)
+	{
+		return true;
+	}
+
+	return false;
 }

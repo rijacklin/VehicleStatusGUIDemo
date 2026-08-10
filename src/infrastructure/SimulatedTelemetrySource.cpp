@@ -40,16 +40,19 @@ void SimulatedTelemetrySource::handleTimeout()
 
 	auto obstacleObservation = m_vehicleState.obstacleObservation;
 
+	constexpr float initialObstacleDistanceMeters = 4.5F;
+	constexpr float obstacleApproachMetersPerTick = 0.5F;
+
 	if (m_obstacleTickCount < 10)
 	{
 		obstacleObservation.status = ObstacleStatus::Detected;
 		if (obstacleObservation.distanceMeters)
 		{
-			obstacleObservation.distanceMeters.value() -= 0.1F;
+			obstacleObservation.distanceMeters.value() -= obstacleApproachMetersPerTick;
 		}
 		else
 		{
-			obstacleObservation.distanceMeters = 10.0F;
+			obstacleObservation.distanceMeters = initialObstacleDistanceMeters;
 		}
 	}
 	else if (m_obstacleTickCount < 20)
@@ -77,6 +80,18 @@ void SimulatedTelemetrySource::handleTimeout()
 	}
 
 	m_connectionTickCount = (m_connectionTickCount + 1) % 50;
+
+	constexpr int telemetryEmissionDurationTicks = 60;
+	constexpr int telemetryCycleDurationTicks = 70;
+
+	const bool shouldEmitTelemetry = m_telemetryEmissionTickCount < telemetryEmissionDurationTicks;
+
+	m_telemetryEmissionTickCount = (m_telemetryEmissionTickCount + 1) % telemetryCycleDurationTicks;
+
+	if (!shouldEmitTelemetry)
+	{
+		return;
+	}
 
 	emit telemetryUpdated(m_vehicleState);
 }

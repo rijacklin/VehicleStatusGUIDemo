@@ -3,6 +3,8 @@
 #include <QtWidgets/QMainWindow>
 #include <QTimer>
 #include "ui_MainWindow.h"
+#include "application/VehicleController.h"
+#include "infrastructure/SimulatedCommandGateway.h"
 #include "infrastructure/SimulatedTelemetrySource.h"
 #include "domain/VehicleState.h"
 #include "domain/ObstacleSafety.h"
@@ -29,9 +31,10 @@ private:
 	Ui::MainWindowClass ui;
 	QTimer m_staleTelemetryTimer;
 	SimulatedTelemetrySource m_telemetrySource;
-	MissionStatus m_missionStatus{ MissionStatus::Idle };
 	ConnectionStatus m_connectionStatus{ ConnectionStatus::Unavailable };
 	SafetySeverity m_obstacleSafetySeverity{ SafetySeverity::Unavailable };
 	TelemetryFreshness m_telemetryFreshness{ TelemetryFreshness::Unavailable };
+	VehicleController m_vehicleController;
+	SimulatedCommandGateway m_commandGateway;
 };
 

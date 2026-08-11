@@ -6,7 +6,7 @@ enum class ObstacleStatus
 {
 	Unavailable,
 	Clear,
-	Detected,
+	Detected
 };
 
 struct ObstacleObservation
@@ -19,14 +19,14 @@ enum class ConnectionStatus
 {
 	Unavailable,
 	Disconnected,
-	Connected,
+	Connected
 };
 
 enum class TelemetryFreshness
 {
 	Unavailable,
 	Fresh,
-	Stale,
+	Stale
 };
 
 enum class MissionStatus
@@ -35,7 +35,7 @@ enum class MissionStatus
 	EmergencyStopped,
 	Idle,
 	Paused,
-	Running,
+	Running
 };
 
 struct VehicleState

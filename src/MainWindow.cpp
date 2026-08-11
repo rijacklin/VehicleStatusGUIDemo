@@ -15,11 +15,21 @@ MainWindow::MainWindow(QWidget *parent)
 	connect(ui.emergencyStopButton, &QPushButton::clicked, this, &MainWindow::handleEmergencyStopButtonClicked);
 	connect(&m_telemetrySource, &SimulatedTelemetrySource::telemetryUpdated, this, &MainWindow::handleTelemetryUpdated);
 	connect(&m_staleTelemetryTimer, &QTimer::timeout, this, &MainWindow::handleTelemetryStale);
+	connect(&m_vehicleController, &VehicleController::commandIssued, &m_commandGateway, &SimulatedCommandGateway::sendCommand);
+	connect(&m_commandGateway, &SimulatedCommandGateway::commandAcknowledged, &m_vehicleController, &VehicleController::handleCommandAcknowledgement);
+	connect(&m_vehicleController, &VehicleController::missionStatusChanged, this, &MainWindow::renderMissionUi);
+	connect(&m_vehicleController, &VehicleController::missionStatusChanged, this, &MainWindow::renderSafetyUi);
+	connect(&m_vehicleController, &VehicleController::pendingCommandChanged, this, &MainWindow::renderMissionUi);
+	connect(&m_vehicleController, &VehicleController::pendingCommandChanged, this, &MainWindow::renderSafetyUi);
+	connect(&m_vehicleController, &VehicleController::commandIssued, this, &MainWindow::renderMissionUi);
+	connect(&m_vehicleController, &VehicleController::commandIssued, this, &MainWindow::renderSafetyUi);
 }
 
 void MainWindow::renderMissionUi()
 {
-	switch (m_missionStatus)
+	const auto missionStatus = m_vehicleController.missionStatus();
+
+	switch (missionStatus)
 	{
 		case MissionStatus::Paused:
 			ui.missionFrameStatus->setText(tr("Paused"));
@@ -75,13 +85,27 @@ void MainWindow::renderMissionUi()
 			ui.pauseButton->setEnabled(false);
 			break;
 	}
+
+	if (m_vehicleController.hasPendingCommand())
+	{
+		ui.startButton->setEnabled(false);
+		ui.pauseButton->setEnabled(false);
+	}
+
+	ui.emergencyStopButton->setEnabled(
+		missionStatus != MissionStatus::EmergencyStopped && !m_vehicleController.isEmergencyStopPending()
+	);
 }
 
 void MainWindow::renderSafetyUi()
 {
-	if (m_missionStatus == MissionStatus::EmergencyStopped)
+	if (m_vehicleController.missionStatus() == MissionStatus::EmergencyStopped)
 	{
 		ui.safetyFrameValue->setText(tr("Emergency stop activated"));
+	}
+	else if (m_vehicleController.isEmergencyStopPending())
+	{
+		ui.safetyFrameValue->setText(tr("Emergency stop requested"));
 	}
 	else if (m_telemetryFreshness != TelemetryFreshness::Fresh)
 	{
@@ -149,24 +173,24 @@ void MainWindow::renderConnectionUi()
 
 void MainWindow::handleStartButtonClicked()
 {
-	if (!isTelemetryUsable() || (m_missionStatus != MissionStatus::Idle && m_missionStatus != MissionStatus::Paused))
+	const auto missionStatus = m_vehicleController.missionStatus();
+
+	if (!isTelemetryUsable() || (missionStatus != MissionStatus::Idle && missionStatus != MissionStatus::Paused))
 	{
 		return;
 	}
 
-	m_missionStatus = MissionStatus::Running;
-	renderMissionUi();
+	m_vehicleController.requestStartMission();
 }
 
 void MainWindow::handlePauseButtonClicked()
 {
-	if (!isTelemetryUsable() || m_missionStatus != MissionStatus::Running)
+	if (!isTelemetryUsable() || m_vehicleController.missionStatus() != MissionStatus::Running)
 	{
 		return;
 	}
 
-	m_missionStatus = MissionStatus::Paused;
-	renderMissionUi();
+	m_vehicleController.requestPauseMission();
 }
 
 void MainWindow::handleEmergencyStopButtonClicked()
@@ -184,10 +208,7 @@ void MainWindow::handleEmergencyStopButtonClicked()
 		return;
 	}
 
-	m_missionStatus = MissionStatus::EmergencyStopped;
-	renderMissionUi();
-	renderSafetyUi();
-	ui.emergencyStopButton->setEnabled(false);
+	m_vehicleController.requestEmergencyStop();
 }
 
 void MainWindow::handleTelemetryUpdated(const VehicleState &state)

@@ -19,9 +19,14 @@ set(PROJECT_SOURCES
 	MainWindow.cpp
 	infrastructure/SimulatedTelemetrySource.h
 	infrastructure/SimulatedTelemetrySource.cpp
+	infrastructure/SimulatedCommandGateway.h
+	infrastructure/SimulatedCommandGateway.cpp
 	domain/VehicleState.h
 	domain/ObstacleSafety.h
 	domain/ObstacleSafety.cpp
+	domain/MissionCommand.h
+	application/VehicleController.h
+	application/VehicleController.cpp
 )
 
 qt_add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})

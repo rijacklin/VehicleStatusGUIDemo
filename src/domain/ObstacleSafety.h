@@ -7,7 +7,7 @@ enum class SafetySeverity
 	Unavailable,
 	Normal,
 	Warning,
-	Critical,
+	Critical
 };
 
 [[nodiscard]] SafetySeverity evaluateSafetySeverity(const ObstacleObservation &observation);

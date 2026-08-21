@@ -3,9 +3,7 @@
 #include <QTimer>
 
 SimulatedCommandGateway::SimulatedCommandGateway(QObject *parent)
-	: QObject(parent)
-{
-}
+	: QObject(parent) {}
 
 void SimulatedCommandGateway::sendCommand(const MissionCommand &command)
 {

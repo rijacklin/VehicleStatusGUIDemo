@@ -1,9 +1,7 @@
 #include "VehicleController.h"
 
 VehicleController::VehicleController(QObject *parent)
-	: QObject(parent)
-{
-}
+	: QObject(parent) {}
 
 MissionStatus VehicleController::missionStatus() const
 {

@@ -7,6 +7,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
 	ui.setupUi(this);
 
+	this->setWindowTitle("Vehicle Status Demo");
+
 	m_staleTelemetryTimer.setInterval(1500);
 	m_staleTelemetryTimer.setSingleShot(true);
 

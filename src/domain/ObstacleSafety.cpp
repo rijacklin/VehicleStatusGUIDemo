@@ -1,4 +1,5 @@
 #include "ObstacleSafety.h"
+#include <cmath>
 
 SafetySeverity evaluateSafetySeverity(const ObstacleObservation &observation)
 {
@@ -23,6 +24,11 @@ SafetySeverity evaluateSafetySeverity(const ObstacleObservation &observation)
 			}
 
 			const auto distanceMeters = observation.distanceMeters.value();
+
+			if (!std::isfinite(distanceMeters))
+			{
+				return SafetySeverity::Unavailable;
+			}
 
 			if (distanceMeters < 0.0F)
 			{
